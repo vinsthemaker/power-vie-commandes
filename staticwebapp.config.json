@@ -2,11 +2,13 @@
   "auth": {
     "identityProviders": {
       "azureActiveDirectory": {
-        "userDetailsClaim": "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
         "registration": {
           "openIdIssuer": "https://login.microsoftonline.com/76811dc1-3b09-4931-9fe2-2e667fc0aab2/v2.0",
           "clientIdSettingName": "AAD_CLIENT_ID",
           "clientSecretSettingName": "AAD_CLIENT_SECRET"
+        },
+        "login": {
+          "loginParameters": ["prompt=select_account"]
         }
       }
     }
@@ -24,3 +26,5 @@
     }
   }
 }
+Remplace TON_TENANT_ID par ton vrai Tenant ID avant de commiter ✅
+
