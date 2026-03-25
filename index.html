@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power Vie — Saisie Commandes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --header-bg: #1a2535;
+  --header-bg2: #243447;
+  --primary: #2563eb;
+  --primary-light: #eff6ff;
+  --primary-mid: #bfdbfe;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --warning-light: #fffbeb;
+  --success: #22c55e;
+  --success-light: #f0fdf4;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --row-hover: #f8faff;
+  --sticky-shadow: 3px 0 8px rgba(0,0,0,0.06);
+  --radius: 8px;
+  --panel-bg: #f8fafc;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+/* ═══ TOPBAR ═══ */
+.topbar {
+  background: var(--header-bg);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.brand {
+  display: flex; align-items: center; gap: 8px; color: white;
+  font-weight: 600; font-size: 14px; letter-spacing: -0.3px;
+}
+
+.brand-logo {
+  width: 28px; height: 28px; background: var(--primary);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: white;
+}
+
+.brand-sep { color: rgba(255,255,255,0.2); margin: 0 2px; }
+.brand-sub { color: rgba(255,255,255,0.45); font-weight: 300; font-size: 12px; }
+
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ═══ BUTTONS ═══ */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; border-radius: var(--radius);
+  font-size: 12.5px; font-weight: 500; cursor: pointer;
+  border: none; font-family: inherit; white-space: nowrap;
+  transition: all 0.15s; line-height: 1;
+}
+.btn svg { flex-shrink: 0; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: #1d4ed8; box-shadow: 0 3px 10px rgba(37,99,235,.35); }
+.btn-ghost { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); border: 1px solid rgba(255,255,255,0.12); }
+.btn-ghost:hover { background: rgba(255,255,255,0.14); color: white; }
+.btn-light { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.btn-light:hover { background: var(--bg); }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #16a34a; box-shadow: 0 3px 10px rgba(34,197,94,.3); }
+.btn-success:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-warning { background: #f59e0b; color: white; }
+.btn-warning:hover { background: #d97706; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* ═══ UPLOAD SCREEN ═══ */
+#upload-screen {
+  flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px;
+}
+
+.upload-card {
+  background: var(--surface); border-radius: 16px; padding: 48px 56px;
+  text-align: center; max-width: 460px; width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07); border: 1px solid var(--border);
+}
+
+.upload-icon {
+  width: 68px; height: 68px; background: var(--primary-light);
+  border-radius: 16px; margin: 0 auto 22px;
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
+}
+
+.upload-card h2 { font-size: 21px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.4px; }
+.upload-card p { color: var(--text-muted); font-size: 13px; line-height: 1.6; margin-bottom: 28px; }
+
+.drop-zone {
+  border: 2px dashed var(--border-strong); border-radius: 12px;
+  padding: 28px 20px; cursor: pointer; transition: all 0.2s; margin-bottom: 14px;
+  background: var(--bg);
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--primary); background: var(--primary-light); }
+.drop-zone p { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+.drop-zone strong { color: var(--primary); }
+#file-input { display: none; }
+
+/* ═══ APP SCREEN ═══ */
+#app-screen {
+  flex: 1; display: none; flex-direction: column; overflow: hidden; min-height: 0;
+}
+
+/* ═══ FILTER BAR ═══ */
+.filter-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 8px 14px; display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;
+  flex-shrink: 0; overflow-x: auto;
+}
+
+.filter-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px; }
+
+.filter-select {
+  height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: inherit; background: var(--bg); color: var(--text);
+  cursor: pointer; outline: none; transition: border-color 0.15s;
+}
+.filter-select:focus { border-color: var(--primary); }
+.filter-select.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); font-weight: 500; }
+
+.filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+.search-input {
+  height: 30px; padding: 0 10px 0 28px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: inherit; background: var(--bg); outline: none;
+  transition: border-color 0.15s; width: 180px;
+}
+.search-input:focus { border-color: var(--primary); background: white; }
+.search-wrap { position: relative; }
+.search-icon { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 12px; pointer-events: none; }
+
+#dynamic-filters { display: contents; }
+.filter-count { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+.filter-count strong { color: var(--text); }
+
+.range-wrap {
+  display: flex; align-items: center; gap: 3px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  padding: 0 8px; height: 30px;
+}
+.range-wrap.active { border-color: var(--primary); background: var(--primary-light); }
+.range-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+.range-input {
+  height: 22px; width: 54px; padding: 0 4px; border: none;
+  font-size: 12px; font-family: 'DM Mono', monospace; background: transparent; color: var(--text);
+  outline: none;
+}
+.range-input::placeholder { color: var(--text-light); }
+.range-wrap.active .range-input { color: var(--primary); }
+.range-wrap.active .range-label { color: var(--primary); }
+
+/* ═══ TOOLBAR ═══ */
+.toolbar {
+  background: var(--header-bg2); padding: 7px 14px;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+
+.toolbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
+.toolbar-right { display: flex; align-items: center; gap: 8px; }
+
+.file-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px; padding: 4px 10px; font-size: 12px; color: rgba(255,255,255,0.8);
+}
+.file-badge .dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+
+.alert-strip {
+  display: none; align-items: center; gap: 6px;
+  background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3);
+  border-radius: 6px; padding: 4px 10px; font-size: 11.5px; color: #fcd34d;
+}
+.alert-strip.show { display: flex; }
+
+/* ═══ MAIN AREA ═══ */
+.main-area {
+  flex: 1; display: flex; overflow: hidden; min-height: 0;
+}
+
+/* ═══ TABLE SIDE ═══ */
+.table-side {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0;
+}
+
+/* ═══ DETAIL PANEL ═══ */
+.detail-panel {
+  height: 0; overflow: hidden; transition: height 0.3s ease;
+  background: var(--panel-bg); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.detail-panel.open { height: 220px; }
+
+.detail-inner {
+  padding: 16px; display: flex; gap: 20px; height: 100%; overflow: hidden;
+}
+
+.detail-img-wrap {
+  flex-shrink: 0; width: 170px; height: 170px;
+  background: white; border: 1px solid var(--border); border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.detail-img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.detail-img-placeholder { font-size: 48px; color: var(--text-light); }
+
+.detail-content { flex: 1; overflow: auto; min-width: 0; }
+.detail-title {
+  font-size: 15px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.detail-ref { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
+}
+.detail-cell { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+.detail-cell-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); margin-bottom: 2px; }
+.detail-cell-value { font-size: 13px; font-weight: 500; }
+
+.detail-close {
+  flex-shrink: 0; align-self: flex-start;
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--text-muted); font-size: 18px; line-height: 1; transition: color 0.15s;
+}
+.detail-close:hover { color: var(--text); }
+
+/* ═══ TABLE ═══ */
+.table-container { flex: 1; overflow: auto; position: relative; }
+
+table { border-collapse: collapse; width: max-content; min-width: 100%; }
+
+thead { position: sticky; top: 0; z-index: 20; }
+
+th {
+  background: var(--header-bg); color: rgba(255,255,255,0.65);
+  padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.06); user-select: none;
+  cursor: pointer; position: relative;
+}
+th:hover { background: #243447; color: rgba(255,255,255,0.9); }
+th.sorted-asc::after { content: ' ▲'; font-size: 9px; opacity: 0.8; }
+th.sorted-desc::after { content: ' ▼'; font-size: 9px; opacity: 0.8; }
+th.sorted-asc, th.sorted-desc { color: white; background: #2d4a6b; }
+
+th.sticky-th { position: sticky; z-index: 30; background: var(--header-bg); }
+th { position: relative; }
+.col-resize-handle {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 5px;
+  cursor: col-resize; z-index: 1;
+  background: transparent;
+  transition: background 0.15s;
+}
+.col-resize-handle:hover, .col-resize-handle.dragging { background: var(--primary); opacity: 0.6; }
+
+th.col-qty-th { background: #1a3a6b; color: white; border-left: 2px solid var(--primary); min-width: 120px; cursor: default; }
+th.col-qty-th:hover { background: #1a3a6b; }
+
+tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; cursor: pointer; }
+tbody tr:hover { background: var(--row-hover); }
+tbody tr.active-row { background: var(--primary-light) !important; }
+tbody tr:hover .sc { background: var(--row-hover); }
+tbody tr.active-row .sc { background: var(--primary-light); }
+
+td {
+  padding: 0 12px; height: 64px; border-right: 1px solid var(--border);
+  vertical-align: middle; white-space: nowrap; color: var(--text);
+}
+
+.sc { position: sticky; background: var(--surface); z-index: 10; }
+
+/* ═══ CELLS ═══ */
+.article-img {
+  width: 56px; height: 56px; object-fit: contain;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: var(--bg); display: block;
+}
+.img-ph {
+  width: 56px; height: 56px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--text-light);
+}
+
+.ref-text { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+.libelle-text { max-width: 200px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.num { text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; }
+.num-zero { color: #d1d5db; }
+
+.badge {
+  display: inline-block; padding: 2px 7px; border-radius: 20px;
+  font-size: 10.5px; font-weight: 500; white-space: nowrap;
+}
+.badge-actif { background: var(--success-light); color: #15803d; }
+.badge-inactif { background: #f3f4f6; color: #9ca3af; }
+.badge-other { background: var(--warning-light); color: #92400e; }
+
+.td-qty { background: #f0f7ff; border-left: 2px solid var(--primary); padding: 0 8px; }
+
+.qty-input {
+  width: 90px; padding: 5px 8px; border: 1.5px solid #bfdbfe;
+  border-radius: 6px; font-size: 13px; font-family: 'DM Mono', monospace;
+  font-weight: 500; color: var(--text); background: white; text-align: right;
+  outline: none; transition: all 0.15s;
+}
+.qty-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+.qty-input.has-value { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
+/* ═══ SUPPLIER PANEL ═══ */
+.supplier-panel {
+  width: 0; overflow: hidden; transition: width 0.3s ease;
+  background: var(--surface); border-left: 1px solid var(--border); flex-shrink: 0;
+}
+.supplier-panel.open { width: 260px; }
+
+.supplier-inner { width: 260px; height: 100%; overflow-y: auto; padding: 14px; }
+.sp-title {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;
+}
+
+.sp-item {
+  border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+  margin-bottom: 8px; transition: border-color 0.15s;
+}
+.sp-item:hover { border-color: var(--primary); }
+.sp-name { font-size: 12px; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-rows { display: flex; justify-content: space-between; }
+.sp-stat { text-align: center; }
+.sp-stat-val { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 700; color: var(--primary); }
+.sp-stat-label { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.sp-total { font-size: 11px; font-weight: 600; color: var(--success); margin-top: 6px; text-align: right; }
+
+/* ═══ FOOTER ═══ */
+.footer {
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: 7px 14px; display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; font-size: 12px; color: var(--text-muted);
+}
+.footer-stats { display: flex; gap: 20px; align-items: center; }
+.footer-stat strong { font-family: 'DM Mono', monospace; color: var(--primary); font-size: 13px; }
+
+/* ═══ COLUMN TOGGLE MENU ═══ */
+.col-menu-wrap { position: relative; }
+.col-menu {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: white; border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; min-width: 200px;
+  max-height: 340px; overflow-y: auto; padding: 8px 0;
+}
+.col-menu.show { display: block; }
+.col-menu-header { padding: 6px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+.col-item { display: flex; align-items: center; gap: 8px; padding: 6px 14px; cursor: pointer; transition: background 0.1s; }
+.col-item:hover { background: var(--bg); }
+.col-item input { cursor: pointer; accent-color: var(--primary); }
+.col-item label { cursor: pointer; font-size: 13px; }
+
+/* ═══ EXPORT MENU ═══ */
+.export-menu-wrap { position: relative; }
+.export-menu {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  background: white; border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; min-width: 220px; padding: 6px 0;
+}
+.export-menu.show { display: block; }
+.exp-item {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px;
+  cursor: pointer; transition: background 0.1s; font-size: 13px;
+}
+.exp-item:hover { background: var(--bg); }
+.exp-item-icon { font-size: 16px; }
+.exp-item-text { flex: 1; }
+.exp-item-title { font-weight: 500; }
+.exp-item-sub { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+
+/* ═══ LOADING ═══ */
+.loading {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45); z-index: 999;
+  align-items: center; justify-content: center;
+}
+.loading.show { display: flex; }
+.loading-card {
+  background: white; border-radius: 12px; padding: 28px 36px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.spinner {
+  width: 34px; height: 34px; border: 3px solid var(--border);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.65s linear infinite; margin: 0 auto 14px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-logo">PV</div>
+    <span>Power Vie</span>
+    <span class="brand-sep">|</span>
+    <span class="brand-sub">Saisie Commandes</span>
+  </div>
+  <div class="topbar-right" id="topbar-right"></div>
+</div>
+
+<!-- UPLOAD -->
+<div id="upload-screen">
+  <div class="upload-card">
+    <div class="upload-icon">📊</div>
+    <h2>Charger votre export Power BI</h2>
+    <p>Exportez votre vue depuis Power BI en Excel, puis chargez-la ici pour saisir vos quantités de commande.</p>
+    <div class="drop-zone" id="drop-zone">
+      <p>📁 Glissez votre fichier Excel ici<br><strong>ou cliquez pour parcourir</strong></p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+    <p style="font-size:12px;color:var(--text-muted);margin-top:8px">Formats acceptés : .xlsx · .xls — Chaque utilisateur charge son propre fichier indépendamment</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar" id="filter-bar">
+    <span class="filter-label">Filtres</span>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search-input" placeholder="Rechercher…" oninput="applyFilters()">
+    </div>
+    <div class="filter-sep"></div>
+    <div id="dynamic-filters"></div>
+    <div class="filter-sep"></div>
+    <button class="btn btn-light btn-sm" onclick="clearFilters()">✕ Réinitialiser filtres</button>
+    <button class="btn btn-light btn-sm" onclick="resetSort()" id="reset-sort-btn" style="display:none">↕ Réinitialiser tri</button>
+    <span class="filter-count" id="filter-count"><strong>0</strong> articles affichés</span>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="file-badge">
+        <span class="dot"></span>
+        <span id="file-name-badge">—</span>
+      </div>
+      <div class="alert-strip" id="alert-strip">⚠️ Plus de 2 000 articles — appliquez des filtres dans Power BI</div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-warning btn-sm" onclick="autoFill()" title="Copier Qté à Commander → Qté Commandée">
+        ⚡ Remplissage auto
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="clearQuantities()" id="clear-qty-btn" title="Vider toutes les quantités saisies">
+        🗑 Vider quantités
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="toggleSupplierPanel()" id="sp-toggle-btn">
+        📊 Montants
+      </button>
+      <div class="col-menu-wrap">
+        <button class="btn btn-ghost btn-sm" onclick="toggleColMenu()">⚙ Colonnes</button>
+        <div class="col-menu" id="col-menu">
+          <div class="col-menu-header">Afficher / Masquer</div>
+          <div id="col-menu-items"></div>
+        </div>
+      </div>
+      <div class="export-menu-wrap">
+        <button class="btn btn-success btn-sm" id="export-btn" onclick="toggleExportMenu()" disabled>⬇ Exporter</button>
+        <div class="export-menu" id="export-menu">
+          <div class="exp-item" onclick="exportAll()">
+            <span class="exp-item-icon">📄</span>
+            <div class="exp-item-text">
+              <div class="exp-item-title">Fichier unique</div>
+              <div class="exp-item-sub">Toutes les lignes avec quantités</div>
+            </div>
+          </div>
+          <div class="exp-item" onclick="exportBySupplier()">
+            <span class="exp-item-icon">📦</span>
+            <div class="exp-item-text">
+              <div class="exp-item-title">Par fournisseur</div>
+              <div class="exp-item-sub">Un fichier Excel par fournisseur</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="resetApp()">↩ Nouveau fichier</button>
+    </div>
+  </div>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+    <div class="table-side">
+
+      <!-- DETAIL PANEL -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="detail-inner" id="detail-inner">
+          <div class="detail-img-wrap" id="detail-img-wrap">
+            <div class="detail-img-placeholder">📦</div>
+          </div>
+          <div class="detail-content">
+            <div class="detail-title" id="detail-title">—</div>
+            <div class="detail-ref" id="detail-ref">—</div>
+            <div class="detail-grid" id="detail-grid"></div>
+          </div>
+          <button class="detail-close" onclick="closeDetail()" title="Fermer">✕</button>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="table-container" id="table-container">
+        <table id="data-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- SUPPLIER PANEL -->
+    <div class="supplier-panel" id="supplier-panel">
+      <div class="supplier-inner">
+        <div class="sp-title">
+          <span>Montants par fournisseur</span>
+        </div>
+        <div id="sp-content"><p style="font-size:12px;color:var(--text-muted)">Saisissez des quantités pour voir les montants.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-stats">
+      <span>Lignes saisies : <strong id="stat-filled">0</strong></span>
+      <span>Total qté : <strong id="stat-total-qty">0</strong></span>
+      <span>Montant total : <strong id="stat-total-amount">0,00 €</strong></span>
+    </div>
+    <span style="font-size:11px;color:var(--text-muted)">By <strong style="color:var(--text)">Velkora Consulting</strong></span>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading" id="loading">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p style="font-size:14px;font-weight:500" id="loading-msg">Chargement…</p>
+  </div>
+</div>
+
+<script>
+// ═══ STATE ═══
+let allData = [];
+let filteredData = [];
+let headers = [];
+let hiddenCols = new Set();
+let quantities = {};   // rowIdx (in allData) → qty
+let fileName = '';
+let sortCol = null, sortDir = 1;
+let activeRowIdx = null;
+let supplierPanelOpen = false;
+let colWidths = {}; // col name → px width
+
+// Filter columns config
+const FILTER_COLS = ['Actuel','Statut','StatutVente','TypeArticle','Fournsisseur','Acheteur'];
+const STOCK_RANGE_COLS = ['Stock1','Stock2','Stock3'];
+const IMAGE_COL = 'Image';
+const REF_COL = 'Ref';
+const LIBELLE_COL = 'Libellé';
+const FOURN_COL = 'Fournsisseur';
+const QTE_CMD_COL = 'Qte à Commander';
+const PRICE_COL = 'Pr';
+const NUM_COLS = new Set(['Ventes 30j','Ventes 90j','Ventes 12m','MoisActifs 12m',
+  'Stock1','Stock2','Stock3','Pr','Cmd Clients','Cmd Frns','JoursStock',
+  'Qte Exces','Qte Surstock','Valeur Stock1','Valeur StockMort','Valeur Surstock',
+  'Tri','UC par UR','UV par UC','Qte à Commander']);
+const STATUS_COLS = new Set(['StatutVente','Statut','Actuel','TypeArticle']);
+const STICKY_COLS = [REF_COL, IMAGE_COL, LIBELLE_COL];
+
+const MAX_ROWS = 2000;
+
+// ═══ FILE LOAD ═══
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  fileName = file.name;
+  showLoading('Lecture du fichier Excel…');
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!data.length) { alert('Fichier vide ou non reconnu.'); hideLoading(); return; }
+      headers = Object.keys(data[0]);
+      allData = data.slice(0, MAX_ROWS);
+      quantities = {};
+      hiddenCols = new Set();
+      sortCol = null; sortDir = 1;
+      activeRowIdx = null;
+      // Default column widths
+      colWidths = { [REF_COL]: 80, [IMAGE_COL]: 64, [LIBELLE_COL]: 200 };
+
+      buildFilters();
+      buildColMenu();
+      applyFilters();
+
+      document.getElementById('file-name-badge').textContent = fileName;
+      document.getElementById('alert-strip').classList.toggle('show', data.length > MAX_ROWS);
+      document.getElementById('upload-screen').style.display = 'none';
+      document.getElementById('app-screen').style.display = 'flex';
+      document.getElementById('app-screen').style.flexDirection = 'column';
+      updateStats();
+    } catch(err) { alert('Erreur : ' + err.message); }
+    hideLoading();
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══ FILTERS ═══
+function buildFilters() {
+  const container = document.getElementById('dynamic-filters');
+  container.innerHTML = '';
+
+  // Dropdown filters
+  FILTER_COLS.forEach(col => {
+    if (!headers.includes(col)) return;
+    const vals = [...new Set(allData.map(r => r[col]).filter(v => v !== '' && v !== null && v !== undefined))].sort();
+    if (vals.length < 2) return;
+    const sel = document.createElement('select');
+    sel.className = 'filter-select';
+    sel.id = 'filter-' + col;
+    sel.innerHTML = `<option value="">— ${col} —</option>` + vals.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    sel.addEventListener('change', () => { sel.classList.toggle('active', sel.value !== ''); applyFilters(); });
+    container.appendChild(sel);
+  });
+
+  // Stock range filters — compact, inline
+  STOCK_RANGE_COLS.forEach(col => {
+    if (!headers.includes(col)) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'range-wrap';
+    wrap.id = 'range-wrap-' + col;
+    wrap.innerHTML = `
+      <span class="range-label">${col.replace('Stock','St')}</span>
+      <span class="range-label">≥</span>
+      <input type="number" class="range-input" id="range-min-${col}" placeholder="0" min="0" oninput="onRangeChange('${col}')">
+      <span class="range-label">≤</span>
+      <input type="number" class="range-input" id="range-max-${col}" placeholder="∞" min="0" oninput="onRangeChange('${col}')">
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+function onRangeChange(col) {
+  const minEl = document.getElementById('range-min-' + col);
+  const maxEl = document.getElementById('range-max-' + col);
+  const wrap = document.getElementById('range-wrap-' + col);
+  const active = (minEl && minEl.value !== '') || (maxEl && maxEl.value !== '');
+  if (wrap) wrap.classList.toggle('active', active);
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  filteredData = allData.filter((row) => {
+    // dropdown filters
+    for (const col of FILTER_COLS) {
+      const sel = document.getElementById('filter-' + col);
+      if (!sel) continue;
+      if (sel.value && String(row[col]) !== sel.value) return false;
+    }
+    // stock range filters
+    for (const col of STOCK_RANGE_COLS) {
+      if (!headers.includes(col)) continue;
+      const minEl = document.getElementById('range-min-' + col);
+      const maxEl = document.getElementById('range-max-' + col);
+      const val = parseFloat(row[col]);
+      if (minEl && minEl.value !== '') { if (isNaN(val) || val < parseFloat(minEl.value)) return false; }
+      if (maxEl && maxEl.value !== '') { if (isNaN(val) || val > parseFloat(maxEl.value)) return false; }
+    }
+    // search
+    if (search) {
+      const haystack = [row[REF_COL], row[LIBELLE_COL], row[FOURN_COL]].join(' ').toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (sortCol) {
+    filteredData.sort((a, b) => {
+      let av = a[sortCol], bv = b[sortCol];
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * sortDir;
+      return String(av).localeCompare(String(bv)) * sortDir;
+    });
+  }
+
+  document.getElementById('filter-count').innerHTML = `<strong>${filteredData.length.toLocaleString('fr-FR')}</strong> articles affichés`;
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('search-input').value = '';
+  FILTER_COLS.forEach(col => {
+    const sel = document.getElementById('filter-' + col);
+    if (sel) { sel.value = ''; sel.classList.remove('active'); }
+  });
+  STOCK_RANGE_COLS.forEach(col => {
+    ['range-min-','range-max-'].forEach(pfx => {
+      const el = document.getElementById(pfx + col);
+      if (el) el.value = '';
+    });
+    const wrap = document.getElementById('range-wrap-' + col);
+    if (wrap) wrap.classList.remove('active');
+  });
+  applyFilters();
+}
+
+// ═══ COLUMN MENU ═══
+function buildColMenu() {
+  const container = document.getElementById('col-menu-items');
+  container.innerHTML = headers.map(h => `
+    <label class="col-item">
+      <input type="checkbox" checked onchange="toggleCol('${esc(h)}', this.checked)" id="col-cb-${esc(h)}">
+      <span>${esc(h)}</span>
+    </label>
+  `).join('');
+}
+
+function toggleCol(col, visible) {
+  if (visible) hiddenCols.delete(col);
+  else hiddenCols.add(col);
+  renderTable();
+}
+
+function toggleColMenu() {
+  document.getElementById('col-menu').classList.toggle('show');
+  document.getElementById('export-menu').classList.remove('show');
+}
+
+// ═══ TABLE RENDER ═══
+function renderTable() {
+  renderHead();
+  renderBody();
+}
+
+function renderHead() {
+  const visibleHeaders = headers.filter(h => !hiddenCols.has(h));
+  let html = '<tr>';
+  let stickyLeft = 0;
+
+  visibleHeaders.forEach(h => {
+    const isSticky = STICKY_COLS.includes(h);
+    const w = colWidths[h] || null;
+    const widthStyle = w ? `width:${w}px;min-width:${w}px;max-width:${w}px;` : '';
+    const stickyStyle = isSticky ? `left:${stickyLeft}px;` : '';
+    const sortClass = sortCol === h ? (sortDir === 1 ? 'sorted-asc' : 'sorted-desc') : '';
+    const stickyClass = isSticky ? 'sticky-th ' : '';
+    const handle = `<div class="col-resize-handle" onmousedown="startResize(event,'${esc(h)}')" onclick="e=>e.stopPropagation()"></div>`;
+    html += `<th class="${stickyClass}${sortClass}" style="${stickyStyle}${widthStyle}" onclick="sortBy('${esc(h)}')">${esc(h)}${handle}</th>`;
+    if (isSticky) stickyLeft += w || 100;
+  });
+  html += `<th class="col-qty-th sticky-th" style="left:${stickyLeft}px">✏ Qté Commandée</th>`;
+  html += '</tr>';
+  document.getElementById('table-head').innerHTML = html;
+}
+
+function renderBody() {
+  const visibleHeaders = headers.filter(h => !hiddenCols.has(h));
+  const tbody = document.getElementById('table-body');
+  const frag = document.createDocumentFragment();
+
+  filteredData.forEach((row) => {
+    const rowIdx = allData.indexOf(row);
+    const isActive = rowIdx === activeRowIdx;
+    const tr = document.createElement('tr');
+    if (isActive) tr.classList.add('active-row');
+    tr.dataset.idx = rowIdx;
+    tr.addEventListener('click', e => {
+      if (e.target.tagName === 'INPUT') return;
+      toggleDetail(rowIdx, row);
+    });
+
+    let html = '';
+    let stickyLeft = 0;
+
+    visibleHeaders.forEach(h => {
+      const val = row[h];
+      const isSticky = STICKY_COLS.includes(h);
+      const w = colWidths[h] || null;
+      const widthStyle = w ? `width:${w}px;min-width:${w}px;max-width:${w}px;` : '';
+      const stickyStyle = isSticky ? `left:${stickyLeft}px;${widthStyle}` : widthStyle;
+      const stickyClass = isSticky ? 'sc ' : '';
+      if (isSticky) stickyLeft += w || 100;
+
+      if (h === IMAGE_COL) {
+        const src = val ? escHtml(String(val)) : '';
+        html += `<td class="${stickyClass}" style="padding:4px 8px;${stickyStyle}">`;
+        if (src) html += `<img class="article-img" src="${src}" alt="" onerror="this.outerHTML='<div class=img-ph>📦</div>'">`;
+        else html += `<div class="img-ph">📦</div>`;
+        html += `</td>`;
+      } else if (h === REF_COL) {
+        html += `<td class="${stickyClass}" style="${stickyStyle}overflow:hidden"><span class="ref-text">${escHtml(val)}</span></td>`;
+      } else if (h === LIBELLE_COL) {
+        html += `<td class="${stickyClass}" style="${stickyStyle}overflow:hidden"><div class="libelle-text" title="${escHtml(val)}">${escHtml(val)}</div></td>`;
+      } else if (STATUS_COLS.has(h)) {
+        const vs = String(val).toLowerCase();
+        const cls = vs.includes('inactif') || vs.includes('non actuel') ? 'badge-inactif'
+          : vs.includes('actif') || vs.includes('actuel') ? 'badge-actif' : 'badge-other';
+        html += `<td style="${widthStyle}">${val ? `<span class="badge ${cls}">${escHtml(val)}</span>` : ''}</td>`;
+      } else if (NUM_COLS.has(h)) {
+        const n = parseFloat(val);
+        const isZero = isNaN(n) || n === 0;
+        let formatted = isNaN(n) ? escHtml(val) : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+        html += `<td class="num ${isZero ? 'num-zero' : ''}" style="${widthStyle}">${formatted}</td>`;
+      } else {
+        html += `<td style="${widthStyle}overflow:hidden;max-width:${w||200}px;text-overflow:ellipsis">${escHtml(val)}</td>`;
+      }
+    });
+
+    // QTY input
+    const qtyVal = quantities[rowIdx] || '';
+    html += `<td class="td-qty sc" style="left:${stickyLeft}px">
+      <input type="number" class="qty-input ${qtyVal ? 'has-value' : ''}" min="0" placeholder="0"
+        value="${qtyVal}" data-idx="${rowIdx}"
+        onchange="onQty(${rowIdx}, this)" oninput="onQty(${rowIdx}, this)"
+        onkeydown="onQtyKeydown(event, ${rowIdx})">
+    </td>`;
+
+    tr.innerHTML = html;
+    frag.appendChild(tr);
+  });
+
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
+}
+
+// ═══ SORT ═══
+function sortBy(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  document.getElementById('reset-sort-btn').style.display = '';
+  applyFilters();
+}
+
+function resetSort() {
+  sortCol = null; sortDir = 1;
+  document.getElementById('reset-sort-btn').style.display = 'none';
+  applyFilters();
+}
+
+// ═══ DETAIL PANEL ═══
+function toggleDetail(rowIdx, row) {
+  if (activeRowIdx === rowIdx) { closeDetail(); return; }
+  activeRowIdx = rowIdx;
+
+  // Image
+  const imgWrap = document.getElementById('detail-img-wrap');
+  const imgSrc = row[IMAGE_COL];
+  if (imgSrc) {
+    imgWrap.innerHTML = `<img src="${escHtml(imgSrc)}" alt="" style="max-width:100%;max-height:100%;object-fit:contain" onerror="this.outerHTML='<div class=detail-img-placeholder>📦</div>'">`;
+  } else {
+    imgWrap.innerHTML = `<div class="detail-img-placeholder">📦</div>`;
+  }
+
+  document.getElementById('detail-title').textContent = row[LIBELLE_COL] || '—';
+  document.getElementById('detail-ref').textContent = `Réf. ${row[REF_COL] || '—'} · ${row[FOURN_COL] || ''}`;
+
+  // Grid of fields (exclude image, ref, libellé)
+  const grid = document.getElementById('detail-grid');
+  const skipCols = new Set([IMAGE_COL, REF_COL, LIBELLE_COL]);
+  grid.innerHTML = headers.filter(h => !skipCols.has(h)).map(h => {
+    const v = row[h];
+    if (v === '' || v === null || v === undefined) return '';
+    const n = parseFloat(v);
+    const display = !isNaN(n) && NUM_COLS.has(h) ? n.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) : escHtml(v);
+    return `<div class="detail-cell"><div class="detail-cell-label">${escHtml(h)}</div><div class="detail-cell-value">${display}</div></div>`;
+  }).join('');
+
+  document.getElementById('detail-panel').classList.add('open');
+
+  // Highlight row
+  document.querySelectorAll('tbody tr').forEach(tr => {
+    tr.classList.toggle('active-row', parseInt(tr.dataset.idx) === rowIdx);
+  });
+}
+
+function closeDetail() {
+  activeRowIdx = null;
+  document.getElementById('detail-panel').classList.remove('open');
+  document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('active-row'));
+}
+
+// ═══ QTY ═══
+function onQty(rowIdx, input) {
+  const val = parseInt(input.value);
+  if (!isNaN(val) && val > 0) { quantities[rowIdx] = val; input.classList.add('has-value'); }
+  else { delete quantities[rowIdx]; input.classList.remove('has-value'); }
+  updateStats();
+  updateSupplierPanel();
+}
+
+function onQtyKeydown(e, rowIdx) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // Find next visible qty input
+    const inputs = [...document.querySelectorAll('.qty-input')];
+    const cur = inputs.findIndex(i => parseInt(i.dataset.idx) === rowIdx);
+    if (cur >= 0 && cur < inputs.length - 1) {
+      inputs[cur + 1].focus();
+      inputs[cur + 1].select();
+    }
+  }
+}
+
+function clearQuantities() {
+  if (!Object.keys(quantities).length) return;
+  if (!confirm('Vider toutes les quantités saisies ?')) return;
+  quantities = {};
+  renderBody();
+  updateStats();
+  updateSupplierPanel();
+}
+
+function autoFill() {
+  if (!headers.includes(QTE_CMD_COL)) { alert('Colonne "' + QTE_CMD_COL + '" introuvable.'); return; }
+  filteredData.forEach(row => {
+    const rowIdx = allData.indexOf(row);
+    const val = parseInt(row[QTE_CMD_COL]);
+    if (!isNaN(val) && val > 0) quantities[rowIdx] = val;
+  });
+  renderBody();
+  updateStats();
+  updateSupplierPanel();
+}
+
+function updateStats() {
+  const filled = Object.keys(quantities).length;
+  const totalQty = Object.values(quantities).reduce((a, b) => a + b, 0);
+  let totalAmount = 0;
+  Object.entries(quantities).forEach(([idx, qty]) => {
+    const row = allData[idx];
+    if (row) { const pr = parseFloat(row[PRICE_COL]); if (!isNaN(pr)) totalAmount += pr * qty; }
+  });
+  document.getElementById('stat-filled').textContent = filled;
+  document.getElementById('stat-total-qty').textContent = totalQty.toLocaleString('fr-FR');
+  document.getElementById('stat-total-amount').textContent = totalAmount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  document.getElementById('export-btn').disabled = filled === 0;
+}
+
+// ═══ SUPPLIER PANEL ═══
+function toggleSupplierPanel() {
+  supplierPanelOpen = !supplierPanelOpen;
+  document.getElementById('supplier-panel').classList.toggle('open', supplierPanelOpen);
+  document.getElementById('sp-toggle-btn').style.background = supplierPanelOpen ? 'rgba(37,99,235,0.2)' : '';
+  if (supplierPanelOpen) updateSupplierPanel();
+}
+
+function updateSupplierPanel() {
+  if (!supplierPanelOpen) return;
+  const bySupplier = {};
+  Object.entries(quantities).forEach(([idx, qty]) => {
+    const row = allData[idx];
+    if (!row) return;
+    const sup = row[FOURN_COL] || 'Inconnu';
+    if (!bySupplier[sup]) bySupplier[sup] = { qty: 0, amount: 0, lines: 0 };
+    bySupplier[sup].qty += qty;
+    bySupplier[sup].lines += 1;
+    const pr = parseFloat(row[PRICE_COL]);
+    if (!isNaN(pr)) bySupplier[sup].amount += pr * qty;
+  });
+  const content = document.getElementById('sp-content');
+  if (!Object.keys(bySupplier).length) {
+    content.innerHTML = '<p style="font-size:12px;color:var(--text-muted)">Saisissez des quantités pour voir les montants.</p>';
+    return;
+  }
+  content.innerHTML = Object.entries(bySupplier)
+    .sort((a, b) => b[1].amount - a[1].amount)
+    .map(([sup, data]) => `
+      <div class="sp-item">
+        <div class="sp-name" title="${escHtml(sup)}">${escHtml(sup)}</div>
+        <div class="sp-rows">
+          <div class="sp-stat"><div class="sp-stat-val">${data.lines}</div><div class="sp-stat-label">lignes</div></div>
+          <div class="sp-stat"><div class="sp-stat-val">${data.qty.toLocaleString('fr-FR')}</div><div class="sp-stat-label">unités</div></div>
+        </div>
+        <div class="sp-total">${data.amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</div>
+      </div>
+    `).join('');
+}
+
+// ═══ EXPORT ═══
+function toggleExportMenu() {
+  document.getElementById('export-menu').classList.toggle('show');
+  document.getElementById('col-menu').classList.remove('show');
+}
+
+function exportAll() {
+  document.getElementById('export-menu').classList.remove('show');
+  showLoading('Export en cours…');
+  setTimeout(() => {
+    try {
+      const rows = allData.map((row, idx) => ({
+        ...row, 'Qté Commandée': quantities[idx] || 0
+      }));
+      writeXlsx(rows, 'Commandes_' + today() + '.xlsx');
+    } catch(e) { alert('Erreur export : ' + e.message); }
+    hideLoading();
+  }, 80);
+}
+
+function exportBySupplier() {
+  document.getElementById('export-menu').classList.remove('show');
+  const linesWithQty = Object.entries(quantities).filter(([,v]) => v > 0);
+  if (!linesWithQty.length) { alert('Aucune quantité saisie.'); return; }
+
+  const bySupplier = {};
+  linesWithQty.forEach(([idx, qty]) => {
+    const row = allData[idx];
+    const sup = (row[FOURN_COL] || 'Inconnu').replace(/[/\\?*[\]]/g, '_');
+    if (!bySupplier[sup]) bySupplier[sup] = [];
+    bySupplier[sup].push({ [REF_COL]: row[REF_COL], [LIBELLE_COL]: row[LIBELLE_COL], 'Qté Commandée': qty });
+  });
+
+  showLoading(`Export de ${Object.keys(bySupplier).length} fichier(s)…`);
+  setTimeout(() => {
+    try {
+      Object.entries(bySupplier).forEach(([sup, rows]) => {
+        writeXlsx(rows, `Commande_${sup}_${today()}.xlsx`);
+      });
+    } catch(e) { alert('Erreur export : ' + e.message); }
+    hideLoading();
+  }, 80);
+}
+
+function writeXlsx(data, filename) {
+  const ws = XLSX.utils.json_to_sheet(data);
+  ws['!cols'] = Object.keys(data[0] || {}).map(k => ({ wch: Math.max(k.length + 2, 14) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Commande');
+  XLSX.writeFile(wb, filename);
+}
+
+function today() { return new Date().toLocaleDateString('fr-FR').replace(/\//g, '-'); }
+
+// ═══ RESET ═══
+function resetApp() {
+  allData = []; filteredData = []; headers = []; quantities = {};
+  hiddenCols = new Set(); sortCol = null; sortDir = 1; activeRowIdx = null;
+  fileInput.value = '';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('upload-screen').style.display = 'flex';
+  document.getElementById('supplier-panel').classList.remove('open');
+  supplierPanelOpen = false;
+}
+
+// ═══ LOADING ═══
+function showLoading(msg) { document.getElementById('loading-msg').textContent = msg || 'Chargement…'; document.getElementById('loading').classList.add('show'); }
+function hideLoading() { document.getElementById('loading').classList.remove('show'); }
+
+// ═══ UTILS ═══
+function esc(v) { return String(v ?? '').replace(/'/g, "\\'"); }
+function escHtml(v) {
+  return String(v ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══ COLUMN RESIZE ═══
+let resizeState = null;
+
+function startResize(e, col) {
+  e.stopPropagation();
+  e.preventDefault();
+  const th = e.target.closest('th');
+  const startX = e.clientX;
+  const startW = th.offsetWidth;
+  resizeState = { col, startX, startW };
+  document.body.style.cursor = 'col-resize';
+  document.body.style.userSelect = 'none';
+  e.target.classList.add('dragging');
+
+  const onMove = ev => {
+    if (!resizeState) return;
+    const newW = Math.max(40, resizeState.startW + ev.clientX - resizeState.startX);
+    colWidths[resizeState.col] = newW;
+    // Update only the relevant th and td widths live (no full re-render for perf)
+    const style = `width:${newW}px;min-width:${newW}px;max-width:${newW}px`;
+    document.querySelectorAll(`th[data-col="${CSS.escape(resizeState.col)}"], td[data-col="${CSS.escape(resizeState.col)}"]`).forEach(el => el.style.cssText += ';' + style);
+    // Re-render is needed to update sticky left positions
+    renderTable();
+  };
+
+  const onUp = () => {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    resizeState = null;
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+// Close menus on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.col-menu-wrap')) document.getElementById('col-menu').classList.remove('show');
+  if (!e.target.closest('.export-menu-wrap')) document.getElementById('export-menu').classList.remove('show');
+});
+</script>
+</body>
+</html>
