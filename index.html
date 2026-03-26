@@ -628,7 +628,7 @@ function loadFile(file) {
       sortCol = null; sortDir = 1;
       activeRowIdx = null;
       // Default column widths
-      colWidths = { [REF_COL]: 80, [IMAGE_COL]: 64, [LIBELLE_COL]: 200 };
+      colWidths = { [REF_COL]: 100, [IMAGE_COL]: 64, [LIBELLE_COL]: 200 };
 
       buildFilters();
       buildColMenu();
@@ -724,6 +724,9 @@ function applyFilters() {
   }
 
   document.getElementById('filter-count').innerHTML = `<strong>${filteredData.length.toLocaleString('fr-FR')}</strong> articles affichés`;
+  // Reset scroll to top when filters change
+  const container = document.getElementById('table-container');
+  if (container) { container.scrollTop = 0; vsScrollTop = 0; }
   renderTable();
 }
 
@@ -766,17 +769,22 @@ function toggleColMenu() {
   document.getElementById('export-menu').classList.remove('show');
 }
 
-// ═══ TABLE RENDER ═══
+// ═══ TABLE RENDER — VIRTUAL SCROLL ═══
+const ROW_HEIGHT = 64;
+const BUFFER = 10;
+let vsScrollTop = 0;
+let vsContainerHeight = 0;
+let vsScheduled = false;
+
 function renderTable() {
   renderHead();
-  renderBody();
+  initVirtualScroll();
 }
 
 function renderHead() {
   const visibleHeaders = headers.filter(h => !hiddenCols.has(h));
   let html = '<tr>';
   let stickyLeft = 0;
-
   visibleHeaders.forEach(h => {
     const isSticky = STICKY_COLS.includes(h);
     const w = colWidths[h] || null;
@@ -793,17 +801,52 @@ function renderHead() {
   document.getElementById('table-head').innerHTML = html;
 }
 
-function renderBody() {
-  const visibleHeaders = headers.filter(h => !hiddenCols.has(h));
+function initVirtualScroll() {
+  const container = document.getElementById('table-container');
+  // Remove old listener to avoid duplicates
+  container.onscroll = onVsScroll;
+  vsContainerHeight = container.clientHeight;
+  renderVirtualBody();
+}
+
+function onVsScroll() {
+  vsScrollTop = this.scrollTop;
+  vsContainerHeight = this.clientHeight;
+  if (!vsScheduled) {
+    vsScheduled = true;
+    requestAnimationFrame(() => { vsScheduled = false; renderVirtualBody(); });
+  }
+}
+
+function renderVirtualBody() {
   const tbody = document.getElementById('table-body');
+  const total = filteredData.length;
+  if (!total) { tbody.innerHTML = ''; return; }
+
+  const startIdx = Math.max(0, Math.floor(vsScrollTop / ROW_HEIGHT) - BUFFER);
+  const visibleCount = Math.ceil(vsContainerHeight / ROW_HEIGHT) + BUFFER * 2;
+  const endIdx = Math.min(total, startIdx + visibleCount);
+
+  const paddingTop = startIdx * ROW_HEIGHT;
+  const paddingBottom = (total - endIdx) * ROW_HEIGHT;
+
+  const visibleHeaders = headers.filter(h => !hiddenCols.has(h));
   const frag = document.createDocumentFragment();
 
-  filteredData.forEach((row) => {
+  // Top spacer
+  const topSpacer = document.createElement('tr');
+  topSpacer.style.height = paddingTop + 'px';
+  topSpacer.id = 'vs-top';
+  frag.appendChild(topSpacer);
+
+  for (let i = startIdx; i < endIdx; i++) {
+    const row = filteredData[i];
     const rowIdx = allData.indexOf(row);
     const isActive = rowIdx === activeRowIdx;
     const tr = document.createElement('tr');
     if (isActive) tr.classList.add('active-row');
     tr.dataset.idx = rowIdx;
+    tr.style.height = ROW_HEIGHT + 'px';
     tr.addEventListener('click', e => {
       if (e.target.tagName === 'INPUT') return;
       toggleDetail(rowIdx, row);
@@ -839,14 +882,13 @@ function renderBody() {
       } else if (NUM_COLS.has(h)) {
         const n = parseFloat(val);
         const isZero = isNaN(n) || n === 0;
-        let formatted = isNaN(n) ? escHtml(val) : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+        const formatted = isNaN(n) ? escHtml(val) : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
         html += `<td class="num ${isZero ? 'num-zero' : ''}" style="${widthStyle}">${formatted}</td>`;
       } else {
         html += `<td style="${widthStyle}overflow:hidden;max-width:${w||200}px;text-overflow:ellipsis">${escHtml(val)}</td>`;
       }
     });
 
-    // QTY input
     const qtyVal = quantities[rowIdx] || '';
     html += `<td class="td-qty sc" style="left:${stickyLeft}px">
       <input type="number" class="qty-input ${qtyVal ? 'has-value' : ''}" min="0" placeholder="0"
@@ -857,11 +899,18 @@ function renderBody() {
 
     tr.innerHTML = html;
     frag.appendChild(tr);
-  });
+  }
+
+  // Bottom spacer
+  const bottomSpacer = document.createElement('tr');
+  bottomSpacer.style.height = paddingBottom + 'px';
+  bottomSpacer.id = 'vs-bottom';
+  frag.appendChild(bottomSpacer);
 
   tbody.innerHTML = '';
   tbody.appendChild(frag);
 }
+
 
 // ═══ SORT ═══
 function sortBy(col) {
@@ -906,9 +955,8 @@ function toggleDetail(rowIdx, row) {
   }).join('');
 
   document.getElementById('detail-panel').classList.add('open');
-
-  // Highlight row
-  document.querySelectorAll('tbody tr').forEach(tr => {
+  // Highlight visible rows only
+  document.querySelectorAll('tbody tr[data-idx]').forEach(tr => {
     tr.classList.toggle('active-row', parseInt(tr.dataset.idx) === rowIdx);
   });
 }
@@ -916,7 +964,7 @@ function toggleDetail(rowIdx, row) {
 function closeDetail() {
   activeRowIdx = null;
   document.getElementById('detail-panel').classList.remove('open');
-  document.querySelectorAll('tbody tr').forEach(tr => tr.classList.remove('active-row'));
+  document.querySelectorAll('tbody tr[data-idx]').forEach(tr => tr.classList.remove('active-row'));
 }
 
 // ═══ QTY ═══
@@ -931,12 +979,23 @@ function onQty(rowIdx, input) {
 function onQtyKeydown(e, rowIdx) {
   if (e.key === 'Enter') {
     e.preventDefault();
-    // Find next visible qty input
-    const inputs = [...document.querySelectorAll('.qty-input')];
-    const cur = inputs.findIndex(i => parseInt(i.dataset.idx) === rowIdx);
-    if (cur >= 0 && cur < inputs.length - 1) {
-      inputs[cur + 1].focus();
-      inputs[cur + 1].select();
+    // Find next row in filteredData
+    const curFilterIdx = filteredData.findIndex(r => allData.indexOf(r) === rowIdx);
+    if (curFilterIdx >= 0 && curFilterIdx < filteredData.length - 1) {
+      const nextRow = filteredData[curFilterIdx + 1];
+      const nextRowIdx = allData.indexOf(nextRow);
+      const nextInput = document.querySelector(`.qty-input[data-idx="${nextRowIdx}"]`);
+      if (nextInput) {
+        nextInput.focus(); nextInput.select();
+      } else {
+        // Scroll to make next row visible then focus
+        const container = document.getElementById('table-container');
+        container.scrollTop = (curFilterIdx + 1) * ROW_HEIGHT - 100;
+        setTimeout(() => {
+          const el = document.querySelector(`.qty-input[data-idx="${nextRowIdx}"]`);
+          if (el) { el.focus(); el.select(); }
+        }, 50);
+      }
     }
   }
 }
@@ -945,7 +1004,7 @@ function clearQuantities() {
   if (!Object.keys(quantities).length) return;
   if (!confirm('Vider toutes les quantités saisies ?')) return;
   quantities = {};
-  renderBody();
+  renderVirtualBody();
   updateStats();
   updateSupplierPanel();
 }
@@ -957,7 +1016,7 @@ function autoFill() {
     const val = parseInt(row[QTE_CMD_COL]);
     if (!isNaN(val) && val > 0) quantities[rowIdx] = val;
   });
-  renderBody();
+  renderVirtualBody();
   updateStats();
   updateSupplierPanel();
 }
