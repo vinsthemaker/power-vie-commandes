@@ -470,7 +470,7 @@ td {
         <span class="dot"></span>
         <span id="file-name-badge">—</span>
       </div>
-      <div class="alert-strip" id="alert-strip">⚠️ Plus de 2 000 articles — appliquez des filtres dans Power BI</div>
+
     </div>
     <div class="toolbar-right">
       <button class="btn btn-warning btn-sm" onclick="autoFill()" title="Copier Qté à Commander → Qté Commandée">
@@ -600,7 +600,7 @@ const NUM_COLS = new Set(['Ventes 30j','Ventes 90j','Ventes 12m','MoisActifs 12m
 const STATUS_COLS = new Set(['StatutVente','Statut','Actuel','TypeArticle']);
 const STICKY_COLS = [REF_COL, IMAGE_COL, LIBELLE_COL];
 
-const MAX_ROWS = 2000;
+
 
 // ═══ FILE LOAD ═══
 const dropZone = document.getElementById('drop-zone');
@@ -622,7 +622,7 @@ function loadFile(file) {
       const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (!data.length) { alert('Fichier vide ou non reconnu.'); hideLoading(); return; }
       headers = Object.keys(data[0]);
-      allData = data.slice(0, MAX_ROWS);
+      allData = data;
       quantities = {};
       hiddenCols = new Set();
       sortCol = null; sortDir = 1;
@@ -635,7 +635,6 @@ function loadFile(file) {
       applyFilters();
 
       document.getElementById('file-name-badge').textContent = fileName;
-      document.getElementById('alert-strip').classList.toggle('show', data.length > MAX_ROWS);
       document.getElementById('upload-screen').style.display = 'none';
       document.getElementById('app-screen').style.display = 'flex';
       document.getElementById('app-screen').style.flexDirection = 'column';
