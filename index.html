@@ -216,7 +216,7 @@ body {
   background: var(--panel-bg); border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.detail-panel.open { height: 220px; }
+.detail-panel.open { height: 260px; }
 
 .detail-inner {
   padding: 16px; display: flex; gap: 20px; height: 100%; overflow: hidden;
@@ -240,9 +240,9 @@ body {
 .detail-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px;
 }
-.detail-cell { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+.detail-cell { background: white; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; overflow: hidden; }
 .detail-cell-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-light); margin-bottom: 2px; }
-.detail-cell-value { font-size: 13px; font-weight: 500; }
+.detail-cell-value { font-size: 13px; font-weight: 500; word-break: break-word; overflow-wrap: break-word; white-space: normal; }
 
 .detail-close {
   flex-shrink: 0; align-self: flex-start;
@@ -290,8 +290,9 @@ tbody tr:hover .sc { background: var(--row-hover); }
 tbody tr.active-row .sc { background: var(--primary-light); }
 
 td {
-  padding: 0 12px; height: 64px; border-right: 1px solid var(--border);
-  vertical-align: middle; white-space: nowrap; color: var(--text);
+  padding: 6px 12px; min-height: 64px; border-right: 1px solid var(--border);
+  vertical-align: middle; white-space: normal; word-break: break-word;
+  overflow-wrap: break-word; color: var(--text); max-width: 300px;
 }
 
 .sc { position: sticky; background: var(--surface); z-index: 10; }
@@ -309,7 +310,7 @@ td {
 }
 
 .ref-text { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
-.libelle-text { max-width: 200px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.libelle-text { overflow-wrap: break-word; word-break: break-word; font-weight: 500; white-space: normal; }
 .num { text-align: right; font-family: 'DM Mono', monospace; font-size: 12px; }
 .num-zero { color: #d1d5db; }
 
@@ -770,7 +771,7 @@ function toggleColMenu() {
 }
 
 // ═══ TABLE RENDER — VIRTUAL SCROLL ═══
-const ROW_HEIGHT = 64;
+const ROW_HEIGHT = 80; // estimated — rows can vary with text wrap
 const BUFFER = 10;
 let vsScrollTop = 0;
 let vsContainerHeight = 0;
@@ -846,7 +847,6 @@ function renderVirtualBody() {
     const tr = document.createElement('tr');
     if (isActive) tr.classList.add('active-row');
     tr.dataset.idx = rowIdx;
-    tr.style.height = ROW_HEIGHT + 'px';
     tr.addEventListener('click', e => {
       if (e.target.tagName === 'INPUT') return;
       toggleDetail(rowIdx, row);
