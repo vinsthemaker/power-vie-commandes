@@ -587,19 +587,20 @@ let colWidths = {}; // col name → px width
 
 // Filter columns config
 const FILTER_COLS = ['Actuel','Statut','StatutVente','TypeArticle','Fournsisseur','Acheteur'];
-const STOCK_RANGE_COLS = ['Stock1','Stock2','Stock3'];
+const STOCK_RANGE_COLS = ['stock1','stock2','stock3','stockAuto'];
 const IMAGE_COL = 'Image';
 const REF_COL = 'Ref';
+const EAN_COL = 'EAN';
 const LIBELLE_COL = 'Libellé';
 const FOURN_COL = 'Fournsisseur';
 const QTE_CMD_COL = 'Qte à Commander';
 const PRICE_COL = 'Pr';
 const NUM_COLS = new Set(['Ventes 30j','Ventes 90j','Ventes 12m','MoisActifs 12m',
-  'Stock1','Stock2','Stock3','Pr','Cmd Clients','Cmd Frns','JoursStock',
+  'stock1','stock2','stock3','stockAuto','Pr','Cmd Clients','Cmd Frns','JoursStock',
   'Qte Exces','Qte Surstock','Valeur Stock1','Valeur StockMort','Valeur Surstock',
   'Tri','UC par UR','UV par UC','Qte à Commander']);
 const STATUS_COLS = new Set(['StatutVente','Statut','Actuel','TypeArticle']);
-const STICKY_COLS = [REF_COL, IMAGE_COL, LIBELLE_COL];
+const STICKY_COLS = [REF_COL, EAN_COL, IMAGE_COL, LIBELLE_COL, 'UV par UC', 'UC par UR', QTE_CMD_COL];
 
 
 
@@ -629,7 +630,7 @@ function loadFile(file) {
       sortCol = null; sortDir = 1;
       activeRowIdx = null;
       // Default column widths
-      colWidths = { [REF_COL]: 100, [IMAGE_COL]: 64, [LIBELLE_COL]: 200 };
+      colWidths = { [REF_COL]: 100, [EAN_COL]: 120, [IMAGE_COL]: 64, [LIBELLE_COL]: 200, 'UV par UC': 70, 'UC par UR': 70, [QTE_CMD_COL]: 90 };
 
       buildFilters();
       buildColMenu();
@@ -671,7 +672,7 @@ function buildFilters() {
     wrap.className = 'range-wrap';
     wrap.id = 'range-wrap-' + col;
     wrap.innerHTML = `
-      <span class="range-label">${col.replace('Stock','St')}</span>
+      <span class="range-label">${col.replace('stock','St').replace('Auto','A')}</span>
       <span class="range-label">≥</span>
       <input type="number" class="range-input" id="range-min-${col}" placeholder="0" min="0" oninput="onRangeChange('${col}')">
       <span class="range-label">≤</span>
@@ -710,7 +711,7 @@ function applyFilters() {
     }
     // search
     if (search) {
-      const haystack = [row[REF_COL], row[LIBELLE_COL], row[FOURN_COL]].join(' ').toLowerCase();
+      const haystack = [row[REF_COL], row[EAN_COL], row[LIBELLE_COL], row[FOURN_COL]].join(' ').toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -870,7 +871,7 @@ function renderVirtualBody() {
         if (src) html += `<img class="article-img" src="${src}" alt="" onerror="this.outerHTML='<div class=img-ph>📦</div>'">`;
         else html += `<div class="img-ph">📦</div>`;
         html += `</td>`;
-      } else if (h === REF_COL) {
+      } else if (h === REF_COL || h === EAN_COL) {
         html += `<td class="${stickyClass}" style="${stickyStyle}overflow:hidden"><span class="ref-text">${escHtml(val)}</span></td>`;
       } else if (h === LIBELLE_COL) {
         html += `<td class="${stickyClass}" style="${stickyStyle}overflow:hidden"><div class="libelle-text" title="${escHtml(val)}">${escHtml(val)}</div></td>`;
@@ -941,11 +942,10 @@ function toggleDetail(rowIdx, row) {
   }
 
   document.getElementById('detail-title').textContent = row[LIBELLE_COL] || '—';
-  document.getElementById('detail-ref').textContent = `Réf. ${row[REF_COL] || '—'} · ${row[FOURN_COL] || ''}`;
+  document.getElementById('detail-ref').textContent = `Réf. ${row[REF_COL] || '—'} · EAN ${row[EAN_COL] || '—'} · ${row[FOURN_COL] || ''}`;
 
-  // Grid of fields (exclude image, ref, libellé)
   const grid = document.getElementById('detail-grid');
-  const skipCols = new Set([IMAGE_COL, REF_COL, LIBELLE_COL]);
+  const skipCols = new Set([IMAGE_COL, REF_COL, EAN_COL, LIBELLE_COL]);
   grid.innerHTML = headers.filter(h => !skipCols.has(h)).map(h => {
     const v = row[h];
     if (v === '' || v === null || v === undefined) return '';
